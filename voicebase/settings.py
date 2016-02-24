@@ -13,8 +13,8 @@ ETC_CONF = '/etc/default/voicebase.conf'
 HOME_CONF = '{}/.voicebase.conf'.format(os.environ.get('HOME', '~'))
 
 # Read home last (so it overrides)
-all_files = [DEFAULT_CONF, ETC_CONF, HOME_CONF]
-CONFIG_FILES = []
+all_files = [ETC_CONF, HOME_CONF]
+CONFIG_FILES = [DEFAULT_CONF] # We always read in the default
 for f in all_files:
     if not os.path.exists(f):
         CONFIG_FILES.append(f)
@@ -25,4 +25,4 @@ parser.read(CONFIG_FILES)
 API_KEY = parser.get('authentication', 'API_KEY')
 PASSWORD = parser.get('authentication', 'PASSWORD')
 
-ENDPOINT = parser.get('api', 'ENDPOINT')
+BASE_URL = parser.get('api', 'BASE_URL')

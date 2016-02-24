@@ -6,3 +6,4 @@ pycallgraph
 ipdbplugin==1.2
 ipdb==0.7
 PyGithub
+tox
