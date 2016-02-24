@@ -1,0 +1,1392 @@
+#%RAML 0.8
+title: Voicebase /v2-beta REST API
+version: v2-beta
+baseUri: "https://apis.voicebase.com/v2-beta"
+protocols: [HTTPS]
+mediaType: application/json
+resourceTypes:
+    -
+        accept.invite:
+            displayName: accept.invite
+    -
+        media.results:
+            displayName: media.results
+traits:
+    -
+        secured:
+            displayName: secured
+securitySchemes:
+    -
+        OAuth 2 Bearer:
+            description: |
+                VoiceBase support OAuth2.0 for authenticating all API requests.
+            type: x-OAuth 2 Bearer
+            describedBy:
+                headers:
+                    Authorization:
+                        description: |
+                            Used to send a valid OAuth 2 access token. Do not use
+                            with the "access_token" query string parameter.
+                        type: string
+                        required: false
+                        repeat: false
+                queryParameters:
+                    access_token:
+                        description: |
+                            Used to send a valid OAuth 2 access token. Do not use together with
+                            the "Authorization" header
+                        type: string
+                        required: false
+                        repeat: false
+                responses:
+                    "401":
+                        description: |
+                            Bad or expired token. This can happen if the user or VoiceBase
+                            revoked or expired an access token. To fix, you should re-
+                            authenticate the user.
+                    "403":
+                        description: |
+                            Bad OAuth request (wrong consumer key, bad nonce, expired
+                            timestamp...). Unfortunately, re-authenticating the user won't help here.
+            settings:
+                authorizationUri: "https://apis.voicebase.com/v2/oauth2/authorize"
+                accessTokenUri: "https://apis.voicebase.com/v2/oauth2/token"
+                authorizationGrants: [code, token]
+    -
+        Basic:
+            description: |
+                VoiceBase Basic support for authenticating users and OAuth token requests.
+            type: Basic Authentication
+            describedBy:
+                headers:
+                    Authorization:
+                        description: |
+                            Used to send a Base64-encoded user:password, as defined by RFC2617.
+                        type: string
+                        required: false
+                        repeat: false
+                responses:
+                    "403":
+                        description: Missing or invalid credentials, or no access to system or operation.
+securedBy:
+    -
+        OAuth 2 Bearer
+/:
+    displayName: VoiceBase v2 APIs
+    description: |
+        To accept your invite for early access to our beta program, start here by clicking GET.
+    type: accept.invite
+    securedBy:
+        -
+            null
+    get:
+        description: |
+            To accept the invite, click ***Try It*** in the upper right-hand corner and enter your ***apikey*** and ***password***. The response will contain your first *OAuth Bearer* ***access token***, which provides access to the rest of the APIs.
+
+            `Your apikey and password are only used when accepting the invite, or when performing operations that manage user access, such as adding or removing users or access tokens. All other operations use OAuth Bearer tokens.`
+        queryParameters:
+            apikey:
+                description: Your VoiceBase API key.
+                type: string
+                required: false
+                repeat: false
+            password:
+                description: The password associated with your VoiceBase API key.
+                type: string
+                required: false
+                repeat: false
+        responses:
+            "200":
+                body:
+                    application/json:
+                        example: |
+                            {
+                              "token" : "Your access token (80+ alphanumeric and special characters, no spaces, case-sensitive)",
+                              "message" : "Thank you for being a part of our early access Beta program. We value your feedback! Please reach out to API support with questions, comments, or feature requests.",
+                              "user" : {
+                                "name" : "admin",
+                                "href" : "/v2-beta/access/users/admin"
+                              },
+                              "success" : true
+                            }
+/media:
+    displayName: Media collection
+    description: Collection of all media and associated analytical results.
+    securedBy:
+        -
+            OAuth 2 Bearer
+    get:
+        description: Retrieve from the media colection.
+        queryParameters:
+            externalId:
+                description: A unique identifier in an external system, set in metadata on POST.
+                type: string
+                required: false
+                repeat: false
+        responses:
+            "200":
+                body:
+                    application/json:
+                        example: |
+                            {
+                              "_links" : {
+                                "self" : { "href" : "/v2-beta/media/3c7499c2-aebd-4efc-aaf7-0ad4636cc160/" }
+                              },
+                              "media" : [
+                                {
+                                  "mediaId" : "3c7499c2-aebd-4efc-aaf7-0ad4636cc160",
+                                  "status" : "finished",
+                                  "metadata" : {
+                                    "external" : {
+                                      "id" : "20492abb-415b-4d35-a59d-b626c6376831"
+                                    }
+                                  }
+                                },
+                                {
+                                  "mediaId" : "2e3c400a-4ab3-4a92-9aec-fcb5019447ab",
+                                  "status" : "accepted",
+                                  "progress" : {
+                                    "ingest" : "pending",
+                                    "transcripts" : "pending",
+                                    "topics" : "pending",
+                                    "publish" : "pending"
+                                  }
+                                }
+                              ]
+                            }
+    post:
+        description: |
+            Upload new new media to the service as an attachment or from a url.
+        body:
+            multipart/form-data:
+                formParameters:
+                    media:
+                        -
+                            description: Media file attached to the request.
+                            type: file
+                            required: true
+                            repeat: false
+                        -
+                            description: URL where media file can be downloaded.
+                            type: string
+                            required: true
+                            repeat: false
+                    configuration:
+                        description: |
+                            A JSON object with configuration options.
+                        type: file
+                        required: false
+                        repeat: false
+                        example: |
+                            {
+                              "configuration" : {
+                                "template" : {
+                                  "name" : "default"
+                                },
+                                "transcripts" : {
+                                  "vocabularies" : [ "investor-relations" ]
+                                },
+                                "keywords" : {
+                                  "groups" : [ "mobile-phone" ]
+                                },
+                                "predictions" : {
+                                  "models" : {
+                                    "sales-lead" : {
+                                      "output" : "extended.sales-followup"
+                                    },
+                                    "not-a-sales-lead" : {
+                                      "output" : "extended.sales-ignore"
+                                    }
+                                  }
+                                },
+                                "publish" : {
+                                  "callbacks" : [
+                                    "https://api.example.org/callbacks/{mediaId}"
+                                  ]
+                                }
+                              }
+                            }
+                    metadata:
+                        description: Metadata about the file being posted.
+                        type: file
+                        required: false
+                        repeat: false
+                        example: |
+                            {
+                              "metadata" : {
+                                "title" : "Best Scene Ever",
+                                "speakers" : [ "Arthur Dent", "Ford Prefect" ],
+                                "external" : {
+                                  "id" : "abcd1234",
+                                  "name" : "Something or other"
+                                },
+                                "extended" : {
+                                  "location" : "Magrathea",
+                                  "region-of-the-country" : "Northern"
+                                }
+                              },
+                              "positional" : {
+                                "18.5" : {
+                                  "event" : "whale hits ground",
+                                  "utterance" : "I wonder if it will be friends with me?"
+                                }
+                              }
+                            }
+                    transcript:
+                        description: attached transcript
+                        type: file
+                        required: false
+                        repeat: false
+        responses:
+            "200":
+                body:
+                    application/json:
+                        example: |
+                            {
+                              "_links" : {
+                                "self" : { "href" : "/v2-beta/media/3c7499c2-aebd-4efc-aaf7-0ad4636cc160/" }
+                              },
+                              "mediaId" : "3c7499c2-aebd-4efc-aaf7-0ad4636cc160",
+                              "status" : "accepted",
+                              "progress" : {
+                                "ingest" : { "status" : "pending" },
+                                "transcripts" : { "status" : "pending" },
+                                "keywords" : { "status" : "pending" },
+                                "predictions" : { "status" : "pending" },
+                                "publish" : { "status" : "pending" }
+                              }
+                            }
+    /{mediaId}:
+        displayName: Media item
+        description: Media item and associated analytical results.
+        uriParameters:
+            mediaId:
+                displayName: mediaId
+                type: string
+                required: true
+                repeat: false
+        get:
+            description: Get this media item and associated analytics.
+            responses:
+                "200":
+                    body:
+                        application/json:
+                            example: |
+                                {
+                                  "_links" : {
+                                    "self" : { "href" : "/v2-beta/media/3c7499c2-aebd-4efc-aaf7-0ad4636cc160/" }
+                                  },
+                                  "media" : {
+                                    "mediaId" : "3c7499c2-aebd-4efc-aaf7-0ad4636cc160",
+                                    "status" : "finished",
+                                    "metadata" : {
+                                      "latest" : {
+                                        "title" : "Best Scene Ever",
+                                        "speakers" : [ "Arthur Dent", "Ford Prefect" ],
+                                        "external" : {
+                                          "id" : "abcd1234",
+                                          "name" : "Something or other"
+                                        },
+                                        "extended" : {
+                                          "location" : "Magrathea",
+                                          "region-of-the-country" : "Northern",
+                                          "sales-followup" : 0.025,
+                                          "sales-ignore" : 0.85
+                                        },
+                                        "positional" : {
+                                          "18.5" : {
+                                            "event" : "whale collision",
+                                            "inquiry" : "I wonder if it will be friends with me?"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "configuration" : {
+                                      "template" : {
+                                        "name" : "default",
+                                        "revision" : "2d1611db-4016-4137-a809-a1d91fd95855"
+                                      }
+                                    },
+                                    "transcripts" : {
+                                      "latest" : {
+                                        "transcriptId" : "e0589bc2-5266-4c52-8347-42c2c186fe16",
+                                        "type" : "machine",
+                                        "engine" : "premium",
+                                        "features" : [ "speakerTurns", "speakerId" ],
+                                        "formats" : [ "json", "srt" ],
+                                        "words" : [
+                                          { "p" : 1, "c" : 0.927, "s" : 10, "e" : 1390, "w" : "him" }
+                                        ]
+                                      }
+                                    },
+                                    "keywords" : {
+                                      "latest" : {
+                                        "revision" : "ba3296f7-9d73-4774-b224-40fcdcd874a2",
+                                        "words" : [
+                                          {
+                                            "mobile advertising" : [
+                                              { "p" : 157, "s" : 1496.3, "e" : 1497.1 },
+                                              { "p" : 211, "s" : 1601.1, "e" : 1602.6 },
+                                              { "p" : 247, "s" : 1784.0, "e" : 1785.3 }
+                                            ]
+                                          },
+                                          {
+                                            "mobile usage" : [
+                                              { "p" : 164, "s" : 1525.6, "e" : 1527.1 },
+                                              { "p" : 203, "s" : 1589.9, "e" : 1591.2 },
+                                              { "p" : 290, "s" : 1984.0, "e" : 1985.4 }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "topics" : {
+                                      "latest" : {
+                                        "revision" : "cc7bd8d1-bb76-47c9-bf52-54acd43aea57",
+                                        "terms" : [
+                                          {
+                                            "name" : "mobile industry",
+                                            "id" : "6f71daf4-4f97-45c6-a29f-5726cbdba270",
+                                            "spotting" : false,
+                                            "keywords" : [
+                                              "mobile advertising",
+                                              "mobile usage"
+                                            ]
+                                          },
+                                          {
+                                            "name" : "mobile-phone",
+                                            "spotting" : true,
+                                            "keywords" : [
+                                              "iPhone"
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "utterances" : {
+                                      "name" : "latest",
+                                      "revision" : "e0deb839-4305-4465-af10-41446754f630",
+                                      "pci" : [
+                                        { "p" : 1, "c" : 0.944, "s" : 1630.25, "e" : 1639.01, "w" : "4111111111111111" }
+                                      ]
+                                    },
+                                    "predictions" : {
+                                      "latest" : {
+                                        "revision" : "221ed6d3-b6bb-46d3-99f5-b0330818d416",
+                                        "sales-lead" : {
+                                          "probability" : 0.025
+                                        },
+                                        "not-a-sales-lead" : {
+                                          "probability" : 0.85
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+        delete:
+            description: Delete this media.
+            responses:
+                "204":
+        /transcripts:
+            description: Collection of transcripts available for this media item.
+            get:
+                description: Get available transcripts.
+                responses:
+                    "200":
+                        body:
+                            application/json:
+                                example: |
+                                    {
+                                      "_links" : {
+                                        "self" : { "href" : "/media/{mediaId}/transcripts/" },
+                                        "items" : { "href" : "/media/{mediaId}/transcripts/{transcriptId}" }
+                                      },
+                                      "transcripts" : {
+                                        "latest" : {
+                                          "revision" : "e0589bc2-5266-4c52-8347-42c2c186fe16",
+                                          "type" : "machine",
+                                          "engine" : "premium",
+                                          "features" : [ "speakerTurns", "speakerId" ],
+                                          "formats" : [ "json", "srt" ],
+                                          "words" : [
+                                            { "p" : 1, "c" : 0.927, "s" : 10, "e" : 1390, "w" : "him" }
+                                          ]
+                                        }
+                                      }
+                                    }
+            /{transcriptId}:
+                displayName: A specific transcript.
+                uriParameters:
+                    transcriptId:
+                        type: string
+                        required: false
+                        repeat: false
+                        default: latest
+                get:
+                    description: Get a specific transcript.
+                    responses:
+                        "200":
+                            body:
+                                application/json:
+                                    example: |
+                                        {
+                                          "_links" : {
+                                            "self" : { "href" : "/media/{mediaId}/transcripts/latest" },
+                                            "revision" : { "href" : "/media/{mediaId}/transcripts/e0589bc2-5266-4c52-8347-42c2c186fe16" }
+                                          },
+                                          "transcript" : {
+                                            "name" : "latest",
+                                            "revision" : "e0589bc2-5266-4c52-8347-42c2c186fe16",
+                                            "type" : "machine",
+                                            "engine" : "premium",
+                                            "features" : [ "speakerTurns", "speakerId" ],
+                                            "formats" : [ "json", "srt" ],
+                                            "words" : [
+                                              { "p" : 1, "c" : 0.927, "s" : 10, "e" : 1390, "w" : "him" }
+                                            ]
+                                          }
+                                        }
+                                text/plain:
+                                text/srt:
+        /progress:
+            description: Collection of processing phases.
+            get:
+                description: Get progress phases.
+                responses:
+                    "200":
+                        body:
+                            application/json:
+                                example: |
+                                    {
+                                      "_links": {
+                                        "self": {
+                                          "href": "/v2-beta/media/71efdf3c-a45b-4f92-aab5-11a6613e437d/progress"
+                                        }
+                                      },
+                                      "job": {
+                                        "progress": {
+                                          "phases": [
+                                            {
+                                              "name": "ingest",
+                                              "status": "completed"
+                                            },
+                                            {
+                                              "name": "transcripts",
+                                              "status": "started"
+                                            },
+                                            {
+                                              "name": "keywords",
+                                              "status": "completed"
+                                            }
+                                          ]
+                                        }
+                                      }
+                                    }
+        /streams:
+            description: Streaming formats for uploaded media.
+            get:
+                description: Get available media URLs.
+                responses:
+                    "200":
+                        body:
+                            application/json:
+                                example: |
+                                    {
+                                      "_links" : {
+                                        "self" : {
+                                          "href" : "/v2-beta/media/b67f4fc1-31b3-4381-b5d2-e7256049091f/streams"
+                                        }
+                                      },
+                                      "streams" : {
+                                        "original" : "https://bucket.s3.amazonaws.com/bucket/file.ext?signature"
+                                      }
+                                    }
+            /original:
+                description: Redirects to the original version of the file.
+                get:
+                    responses:
+                        "302":
+/definitions:
+    displayName: Definitions and reference data.
+    description: Allows definition of complex behaviors or reusable data sets.
+    get:
+        responses:
+            "200":
+                body:
+                    application/json:
+                        example: |
+                            {
+                              "_links" : {
+                                "self" : { "href" : "/v2-beta/definitions/" },
+                                "collections" : [
+                                  { "href" : "/v2-beta/definitions/transcripts/", "title" : "Definitions for trascription" },
+                                  { "href" : "/v2-beta/definitions/keywords/", "title" : "Definitions for keyword extraction" },
+                                  { "href" : "/v2-beta/definitions/prediction/", "title" : "Definitions for prediction" }
+                                ]
+                              }
+                            }
+    /keywords:
+        displayName: Definitions for Keywords
+        get:
+            description: Get definition types for keywords.
+            responses:
+                "200":
+                    body:
+                        application/json:
+                            example: |
+                                {
+                                  "_links" : {
+                                    "self" : { "href" : "/v2-beta/definitions/keywords/" },
+                                    "collections" : [
+                                      { "href" : "/v2-beta/definitions/keywords/groups/", "Defitinitions of keyword groups" }
+                                    ]
+                                  }
+                                }
+        /groups:
+            displayName: Keyword Groups
+            description: Define keyword groups for spotting important topics.
+            get:
+                description: Get all defined keyword groups.
+                responses:
+                    "200":
+                        body:
+                            application/json:
+                                example: |
+                                    {
+                                      "_links" : {
+                                        "self" : { "href" : "/v2-beta/definitions/keywords/groups/" },
+                                        "items" : { "href" : "/v2-beta/definitions/keywords/groups/{groupId}" }
+                                      },
+                                      "groups" : [
+                                        {
+                                          "name" : "mobile-phone",
+                                          "revision" : "a818982c-906a-4050-a87c-da698c59342a",
+                                          "keywords" : [
+                                            "iPhone",
+                                            "Android",
+                                            "Samsung",
+                                            "Nokia",
+                                            "Smartphone"
+                                          ]
+                                        }
+                                      ]
+                                    }
+            /{groupId}:
+                displayName: Named keyword group.
+                description: A group of a set of related keywords.
+                uriParameters:
+                    groupId:
+                        displayName: groupId
+                        type: string
+                        required: true
+                        repeat: false
+                get:
+                    description: Get the keyword group.
+                    responses:
+                        "200":
+                            body:
+                                application/json:
+                                    example: |
+                                        {
+                                          "_links" : {
+                                            "self" : { "href" : "/v2-beta/definitions/keywords/groups/mobile-phone" },
+                                            "revision" : { "href" : "/v2-beta/definitions/keywords/groups/a818982c-906a-4050-a87c-da698c59342a" }
+                                          },
+                                          "group" : {
+                                            "name" : "mobile-phone",
+                                            "revision" : "a818982c-906a-4050-a87c-da698c59342a",
+                                            "keywords" : [
+                                              "iPhone",
+                                              "Android",
+                                              "Samsung",
+                                              "Nokia",
+                                              "Smartphone"
+                                            ]
+                                          }
+                                        }
+                put:
+                    description: Create or update group from a set of keywords.
+                    body:
+                        application/json:
+                            example: |
+                                {
+                                  "group" : {
+                                    "name" : "mobile-phone",
+                                    "revision" : "a818982c-906a-4050-a87c-da698c59342a",
+                                    "keywords" : [
+                                      "iPhone",
+                                      "Android",
+                                      "Samsung",
+                                      "Nokia",
+                                      "Smartphone"
+                                    ]
+                                  }
+                                }
+                    responses:
+                        "200":
+                            body:
+                                application/json:
+                                    example: |
+                                        {
+                                          "_links" : {
+                                            "self" : { "href" : "/v2-beta/definitions/keywords/groups/mobile-phone" },
+                                            "revision" : { "href" : "/v2-beta/definitions/keywords/groups/a818982c-906a-4050-a87c-da698c59342a" }
+                                          },
+                                          "group" : {
+                                            "name" : "mobile-phone",
+                                            "revision" : "a818982c-906a-4050-a87c-da698c59342a",
+                                            "keywords" : [
+                                              "iPhone",
+                                              "Android",
+                                              "Samsung",
+                                              "Nokia",
+                                              "Smartphone"
+                                            ]
+                                          }
+                                        }
+                delete:
+                    description: Delete this keyword group.
+                    responses:
+                        "204":
+    /media:
+        displayName: Definitions for Media
+        /search:
+            displayName: Media Search
+            description: Define extended metadata searchable fields.
+            get:
+                description: Get searchable fields.
+                responses:
+                    "200":
+                        body:
+                            application/json:
+                                example: |
+                                    {
+                                      "_links" : {
+                                        "self" : { "href" : "/v2-beta/definitions/media/search }
+                                      },
+                                      "searchableFields" : {
+                                        "revision" : "a818982c-906a-4050-a87c-da698c59342a",
+                                        "fields" : [
+                                          "title",
+                                          "extended.size"
+                                        ]
+                                      }
+                                    }
+            put:
+                description: Create or update group from a set of keywords.
+                body:
+                    application/json:
+                        example: |
+                            {
+                              "fields" : [
+                                "title",
+                                "extended.size"
+                              ]
+                            }
+                responses:
+                    "200":
+                        body:
+                            application/json:
+                                example: |
+                                    {
+                                      "_links" : {
+                                        "self" : { "href" : "/v2-beta/definitions/media/search }
+                                      },
+                                      "searchableFields" : {
+                                        "revision" : "a818982c-906a-4050-a87c-da698c59342a",
+                                        "fields" : [
+                                          "title",
+                                          "extended.size"
+                                        ]
+                                      }
+                                    }
+    /predictions:
+        displayName: Definitions for Predictions
+        /models:
+            displayName: Prediction Models
+            description: Retrieve available predicitive models.
+            get:
+                description: Get all available predictive models.
+                responses:
+                    "200":
+                        body:
+                            application/json:
+                                example: |
+                                    {
+                                      "_links" : {
+                                        "self" : { "href" : "/v2-beta/definitions/keywords/groups/" },
+                                        "items" : { "href" : "/v2-beta/definitions/keywords/groups/{groupId}" }
+                                      },
+                                      "groups" : [
+                                        {
+                                          "name" : "mobile-phone",
+                                          "revision" : "a818982c-906a-4050-a87c-da698c59342a",
+                                          "keywords" : [
+                                            "iPhone",
+                                            "Android",
+                                            "Samsung",
+                                            "Nokia",
+                                            "Smartphone"
+                                          ]
+                                        }
+                                      ]
+                                    }
+            /{modelName}:
+                displayName: Named predictive model.
+                description: A predictive model.
+                uriParameters:
+                    modelName:
+                        displayName: modelName
+                        type: string
+                        required: true
+                        repeat: false
+                get:
+                    description: Get the predictive model.
+                    responses:
+                        "200":
+                            body:
+                                application/json:
+                                    example: |
+                                        {
+                                          "_links" : {
+                                            "self" : { "href" : "/v2-beta/definitions/keywords/groups/mobile-phone" },
+                                            "revision" : { "href" : "/v2-beta/definitions/keywords/groups/a818982c-906a-4050-a87c-da698c59342a" }
+                                          },
+                                          "group" : {
+                                            "name" : "mobile-phone",
+                                            "revision" : "a818982c-906a-4050-a87c-da698c59342a",
+                                            "keywords" : [
+                                              "iPhone",
+                                              "Android",
+                                              "Samsung",
+                                              "Nokia",
+                                              "Smartphone"
+                                            ]
+                                          }
+                                        }
+/access:
+    displayName: Access and user management.
+    description: Manage access for organizations and users.
+    securedBy:
+        -
+            Basic
+    get:
+        description: Access and user management operations.
+        responses:
+            "200":
+                body:
+                    application/json:
+    /users:
+        displayName: Users.
+        description: View, create, or delete users.
+        securedBy:
+            -
+                Basic
+        get:
+            description: View existing users.
+            responses:
+                "200":
+                    body:
+                        application/json:
+                            example: |
+                                {
+                                  "_links" : {
+                                    "self" : { "href" : "/v2-beta/access/users/" },
+                                    "items" : { "href" : "/v2-beta/access/users/{userId}/" }
+                                  },
+                                  "users" : [
+                                    {
+                                      "name" : "admin",
+                                      "admin" : true,
+                                      "userId" : "1836cea2-55bb-495b-ac17-cf2a7cf8943e",
+                                      "email" : "jane.doe@example.org"
+
+                                    },
+                                    {
+                                      "name" : "john",
+                                      "userId" : "174e1e74-5a3d-429d-b24f-a60bffd603c6",
+                                      "email" : "john.doe@example.org"
+                                    }
+                                  ]
+                                }
+        /{userId}:
+            displayName: User-specific operations
+            description: Manage a users authentication and tokens
+            uriParameters:
+                userId:
+                    displayName: userId
+                    description: User name identified or uuid
+                    type: string
+                    required: false
+                    repeat: false
+                    default: admin
+            securedBy:
+                -
+                    Basic
+            get:
+                description: Details for a specific user.
+                responses:
+                    "200":
+                        body:
+                            application/json:
+                                example: |
+                                    {
+                                      "user" : {
+                                        "id" : "xxxxxxxx-yyyy-4xxx-zzzzzzzzzzzz",
+                                        "email" : "xxxx@voicebase.com",
+                                        "tokens" : [
+                                          { "type" : "Bearer", "token" : "NNNNNNNmmmmm" }
+                                        ]
+                                      }
+                                    }
+            /tokens:
+                displayName: Access tokens for a user
+                securedBy:
+                    -
+                        Basic
+                get:
+                    description: |
+                        Returns all current tokens for a user
+                    responses:
+                        "200":
+                            body:
+                                application/json:
+                                    example: |
+                                        {
+                                          "tokens" : [
+                                            {
+                                              "token" : "WLtrGY1UB1VUXkDaf0LSxDIhIWb-z4TSS8tERTMMvAjnCiRgRoa9AF125YRjITrhKAMkh2TtmhR-qelXK9XteA",
+                                              "type" : "Bearer",
+                                              "expires" : "2015-01-06T01:02:01Z",
+                                              "privileges": [
+                                                {
+                                                  "mediaId" : "6441958b-26c2-44c1-84f0-6fc5dd13ce71",
+                                                  "rights" : [ "play" ]
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                post:
+                    description: |
+                        Create a new token.
+                    body:
+                        application/json:
+                            example: |
+                                {
+                                  "token" : {
+                                    "privileges": [
+                                      {
+                                        "mediaId" : "6441958b-26c2-44c1-84f0-6fc5dd13ce71",
+                                        "rights" : [ "play" ]
+                                      }
+                                    ],
+                                    "expires" : "2015-01-06T01:02:01Z"
+                                  }
+                                }
+                    responses:
+                        "200":
+                            body:
+                                application/json:
+                                    example: |
+                                        {
+                                          "status" : "SUCCESS",
+                                          "token" : {
+                                            "type" : "Bearer",
+                                            "token" : "NNNNNNmmmmmmmm"
+                                          }
+                                        }
+                /{token}:
+                    displayName: Manage a specific token.
+                    description: Get or delete a specific token.
+                    uriParameters:
+                        token:
+                            displayName: token
+                            type: string
+                            required: true
+                            repeat: false
+                    securedBy:
+                        -
+                            Basic
+                    get:
+                        description: |
+                            Returns metadata for the specified token.
+                        responses:
+                            "200":
+                                body:
+                                    application/json:
+                                        example: |
+                                            {
+                                              "token" : {
+                                                "privileges": [
+                                                  {
+                                                    "mediaId" : "6441958b-26c2-44c1-84f0-6fc5dd13ce71",
+                                                    "rights" : [ "play" ]
+                                                  }
+                                                ],
+                                                "expires" : "2015-01-06T01:02:01Z"
+                                              }
+                                            }
+                    delete:
+                        description: Delete and revoke this token.
+                        responses:
+                            "204":
+documentation:
+    -
+        title: Getting Started
+        content: |
+            This set of examples relies on the commonly-found *curl* tool and *jq* for JSON handling. You can find *jq* here:
+            [jq](http://stedolan.github.io/jq/)
+
+            Two common patterns in these examples are:
+            - the use of `tee` to show the response to the console and save it for later processing
+            - the use of `| jq '.'` to transform compact JSON responses into a more readable format
+
+
+            1. Authorization token
+            ---
+
+            To make all other API requests, first accept your invite and retrieve your OAuth2.0 Bearer token.
+
+            _Replace `<your API Key here>` and `<your password here>` with the API Key and Secret from your account page._
+
+            _Note: You can call this API multiple times to get token.
+
+            ```sh
+            export APIKEY='<your API Key here>'
+            export PASSWORD='<your password here>'
+            curl "https://apis.voicebase.com/v2-beta/?apikey=${APIKEY}&password=${PASSWORD}" \
+                | tee accept-invite-response.json | jq '.'
+            export TOKEN=$( jq --raw-output '.token' < accept-invite-response.json )
+            echo "Token:" ${TOKEN}a
+            ```
+
+            2. Upload a media file
+            ---
+
+            Next, upload a media file to VoiceBase for analysis. Media files reside under the `/media/` collection.
+
+            To upload, make a `form/mime-multipart` `POST` to the `/media/` collection.
+
+            _Replace `recording.mp3` in the example with a path to the file to analyze._
+
+            ```sh
+            curl https://apis.voicebase.com/v2-beta/media \
+                --header "Authorization: Bearer $TOKEN" \
+                --form media=@recording.mp3 \
+                | tee media-post-response.json | jq '.'
+
+            export MEDIA_ID=$( jq --raw-output '.mediaId' < media-post-response.json )
+            echo "Uploaded file with mediaId = ${MEDIA_ID}"
+            ```
+
+            Each uploaded media file will have a unique `mediaId` for future reference.
+
+            The `/media POST` response contains a status field with one of the following values:
+              - `accepted` - the media has been accepted for processing
+              - `finished` - the media has been successfully completed
+              - `failed` - the media failed during processing
+              - `running` - the media is currently actively being processed
+              - `rejected` - the media failed extended validation during processing (this is very uncommon)
+
+            _Note for implementers: the attachment name (`media`) is an important detail. VoiceBase will reject the requests if the attachment is mis-named._
+
+            3. Check processing status
+            ---
+
+            Check the status of processing for the media by `GET`ting its corresponding item in the `/media/` collection.
+
+            ```sh
+            curl https://apis.voicebase.com/v2-beta/media/${MEDIA_ID}
+                --header "Authorization: Bearer $TOKEN" \
+                | tee media-get-response.json | jq '.'
+            export STATUS=$( jq --raw-output '.status' < media-get-response.json )
+            echo "Status at" $( date ) "is" "${STATUS}"
+            ```
+
+            A common pattern is to wait until VoiceBase's processing of the media is complete before.
+
+            To get started, poll periodically for status of the media until processing is complete (`finished` or `failed`).
+
+            _Note: We will later look at how to use If-Modified-Since or HTTP[S] callbacks to accomplish this more efficiently._
+
+            ```sh
+            until [[ ${STATUS} == 'finished' || ${STATUS} == 'failed' ]]; do
+                curl https://apis.voicebase.com/v2-beta/media/${MEDIA_ID} \
+                    --header "Authorization: Bearer $TOKEN" \
+                    | tee media-get-response.json | jq '.'
+                export STATUS=$( jq --raw-output '.status' < media-get-response.json )
+                echo "Status at" $( date ) "is" "${STATUS}"
+            done
+            ```
+
+            4. Get transcript, keywords, and topics
+            ---
+
+            Transcripts, keywords, and topics can be retrieved with a single `GET` request against the `/media/` item after processing.
+            ```sh
+            curl "https://apis.voicebase.com/v2-beta/media/${MEDIA_ID}" \
+                --header "Authorization: Bearer $TOKEN" \
+                | tee media-get-all.json | jq '.'
+            ```
+    -
+        title: High-Accuracy Premium Engine
+        content: |
+            This set of examples relies on the commonly-found *curl* tool and *jq* for JSON handling. You can find *jq* here:
+            [jq](http://stedolan.github.io/jq/)
+
+            1. Selecting the high-accuracy premium engine on upload
+            ---
+
+            VoiceBase now features a high-accuracy `premium` machine transcription engine.
+
+            Upload media by making a `form/mime-multipart` `POST` to the `/media` collection. In addition to the `media` attachment that contains the audio file, add a `configuration` attachment.
+
+            The `configuration` attachment is a JSON document with the following structure, which may be combined with configuration for other behaviors. The configuration attachment has the following structure:
+              - a `configuration` key with an object as the value
+              - a `transcripts` key under the `configuration` object, with an object as the value
+              - an `engine` key under the `transcripts` object, with the name of the engine as the value. Supported values are:
+                - `standard` - the standard engine emphasizing speed over accuracy
+                - `premium` - the premium engine emphasing high accuracy
+
+            In the example below, replace:
+              - `recording.mp3` with a path to the file to analyze
+              - `$TOKEN` with your Bearer token
+
+            ```sh
+            curl https://apis.voicebase.com/v2-beta/media \
+                --header "Authorization: Bearer $TOKEN" \
+                --form media=@recording.mp3 \
+                --form 'configuration={
+                    "configuration" : {
+                      "transcripts": {
+                        "engine": "premium"
+                      }
+                    }
+                  }' \
+                | tee media-post-response.json
+            export MEDIA_ID=$( jq --raw-output '.mediaId' < media-post-response.json )
+            echo "Uploaded file with mediaId = ${MEDIA_ID}"
+            ```
+    -
+        title: Working with Transcripts
+        content: |
+            This set of examples relies on the commonly-found *curl* tool and *jq* for JSON handling. You can find *jq* here:
+            [jq](http://stedolan.github.io/jq/)
+
+            1. Retrieving a JSON transcript with metadata
+            ---
+
+            Retrieve a JSON-formatted transcript with metadata using a `GET` against the `transcripts` collection under the `media` item. By convention, the transcript for most common scenarios is called `latest`.
+
+            In the example below, replace:
+              - `$MEDIA_ID` with the media id of a processed media file (`status` = `finished`)
+              - `$TOKEN` with your Bearer token
+
+            ```sh
+            curl https://apis.voicebase.com/v2-beta/media/$MEDIA_ID/transcripts/latest \
+                --header "Authorization: Bearer $TOKEN"
+            ```
+
+            2. Retrieving a plain text transcript
+            ---
+
+            To retrieve a transcripts as plain text, add an `Accept` HTTP header with the value `text/plain`.
+
+            In the example below, replace:
+              - `$MEDIA_ID` with the media id of a processed media file (`status` = `finished`)
+              - `$TOKEN` with your Bearer token
+
+            ```sh
+            curl https://apis.voicebase.com/v2-beta/media/$MEDIA_ID/transcripts/latest \
+                --header "Authorization: Bearer $TOKEN" \
+                --header "Accept: text/plain"
+            ```
+
+            3. Retrieving an SRT-formatted transcript
+            ---
+
+            To retrieve a transcripts as plain text, add an `Accept` HTTP header with the value `text/srt`.
+
+            In the example below, replace:
+              - `$MEDIA_ID` with the media id of a processed media file (`status` = `finished`)
+              - `$TOKEN` with your Bearer token
+
+            ```sh
+            curl https://apis.voicebase.com/v2-beta/media/$MEDIA_ID/transcripts/latest \
+                --header "Authorization: Bearer $TOKEN" \
+                --header "Accept: text/srt"
+            ```
+    -
+        title: Keyword Spotting
+        content: |
+            Creating a New Keyword Group
+            ----------------------------
+
+            To define new keyword group, or update an existing keyword group, simply `PUT` the group under `/v2-beta/definitions/keywords/groups`. The body of the PUT request is a JSON object (`Content-Type: application/json`) that contains two keys:
+             - `name` : the name of the keyword group
+             - `keywords` : an array of the included keywords
+
+            For example, to create group `data` that includes the keywords `data science`, `big data`, and `data mining`, make the following `PUT` request using curl, or an equivalent request using a tool of your choice:
+
+            ```sh
+            curl https://apis.voicebase.com/v2-beta/definitions/keywords/groups/data \
+              --header "Authorization: Bearer $TOKEN" \
+              --header "Content-Type: application/json" \
+              --request PUT \
+              --data '{ "name" : "data", "keywords" : [ "data science", "big data", "data mining" ] }'
+            ```
+
+            Uploading Media with Keyword Spotting Enabled
+            ---------------------------------------------
+
+            To upload media with keyword spotting enabled, include a JSON `configuration` attachment with your media `POST`. The `configuration` attachment should contain the key:
+              - `configuration` : root object for configuration data
+                - `keywords` (child of `configuration`): object for keyword-specific configuration
+                  - `groups` (child of `keywords`): array of keyword-spotting groups
+
+            For example, to upload media from a local file called `recording.mp3` and spot keywords using the `data` group, make the following `POST` request using curl, or an equivalent request using a tool of your choice:
+
+            ```sh
+            curl https://apis.voicebase.com/v2-beta/media \
+              --header "Authorization: Bearer $TOKEN" \
+              --form media=@recording.mp3 \
+              --form 'configuration={"configuration":{"keywords":{"groups":["data"]}}}'
+            ```
+    -
+        title: Multiple Speakers and Channels
+        content: |
+            This set of examples relies on the commonly-found *curl* tool and *jq* for JSON handling. You can find *jq* here:
+            [jq](http://stedolan.github.io/jq/)
+
+            1. Uploading a stereo file
+            ---
+
+            Upload media by making a `form/mime-multipart` `POST` to the `/media` collection. In addition to the `media` attachment that contains the audio file, add a `configuration` attachment.
+
+            The `configuration` attachment is a JSON document with the following structure, which may be combined with configuration for other behaviors. The configuration attachment has the following structure:
+              - a `configuration` key with an object as the value
+              - an `ingest` key under the `configuration` object, with an object as the value
+              - a `channels` key under the `ingest` object, with an object as the value
+              - a `left` key under the `channels` object, with an object as the value, corresponding to the left channel
+              - a `right` key under the `channels` object, with an object as the value, corresponding to the right channel
+              - `speaker` keys under the `left` and `right` objects, with the names of each speaker as values
+
+            _In the example below, replace:
+              - `stereo.wav` with a path to the file to analyze
+              - `$TOKEN` with your Bearer token
+              - `agent` with the name of the speaker on the left channel
+              - `caller` with the name of the speaker on the right channel_
+
+            ```sh
+            curl https://apis.voicebase.com/v2-beta/media \
+                --header "Authorization: Bearer $TOKEN" \
+                --form media=@stereo.wav \
+                --form 'configuration={
+                    "configuration" : {
+                      "ingest": {
+                        "channels": {
+                          "left": {
+                            "speaker": "agent"
+                          },
+                          "right": {
+                            "speaker": "caller"
+                          }
+                        }
+                      }
+                    }
+                  }' \
+                | tee media-post-response.json
+            export MEDIA_ID=$( jq --raw-output '.mediaId' < media-post-response.json )
+            echo "Uploaded file with mediaId = ${MEDIA_ID}"
+            ```
+    -
+        title: Working with Callbacks
+        content: |
+
+            This set of examples relies on the commonly-found *curl* tool and *jq* for JSON handling. You can find *jq* here: [jq](http://stedolan.github.io/jq/)
+
+            Uploading Media with Callbacks Enabled
+            --------------------------------------
+
+            To upload media with callbacks enabled, include a JSON `configuration` attachment with your media `POST`. The `configuration` attachment should contain the key:
+              - `configuration` : root object for configuration data
+                - `publish` (child of `configuration`): object for publish-specific configuration
+                  - `callbacks` (child of `publish`): array of callbacks, with one object per callback desired
+                    - object per callback
+                      - `url` (child of callback object): the `https` url for delivering a callback notification
+                      - `method` (child of callback object): the HTTPS method for callback delivery, with the following supported values:
+                        - `POST`: deliver callbacks as an HTTPS POST
+                      - `include` (child of callback object): array of data to include with the callback, with the following supported values:
+                        - `transcripts`: include transcripts for the media
+                        - `topics`: include topics and corresponding keywords for the media
+                        - `metadata`: include supplied metadata, often useful for correlated to records in a different system
+
+            For example, to upload media from a local file called `recording.mp3` and receive a callback at `https://example.org/callback`, make the following `POST` request using curl, or an equivalent request using a tool of your choice:
+
+            ```sh
+            curl https://apis.voicebase.com/v2-beta/media \
+                --header "Authorization: Bearer $TOKEN" \
+                --form media=@recording.mp3 \
+                --form 'configuration={
+                    "configuration" : {
+                      "publish": {
+                        "callbacks": [
+                          {
+                            "url" : "https://example.org/callback",
+                            "method" : "POST",
+                            "include" : [ "transcripts", "keywords", "topics", "metadata" ]
+                          }
+                        ]
+                      }
+                    }
+                  }' \
+                | tee media-post-response.json
+            export MEDIA_ID=$( jq --raw-output '.mediaId' < media-post-response.json )
+            echo "Uploaded file with mediaId = ${MEDIA_ID}"
+            ```
+
+            When using callbacks, you can still query the status of the media processing using a `GET` request to `/media/{mediaId}`.
+
+            Callback data
+            -------------
+
+            When media processing is complete, VoiceBase will call back your specified endpoint by making an `HTTPS` `POST` request. The body is a JSON object with the following data:
+              - `_links` : HAL metadata with a URL for the corresponding media item
+                - `self` (child of `links`) : section for the media item
+                  - `href` (child of `self`) : URL for the media item
+              - `callback` : object with metadata about the callback event
+                - `success` : `true` for success notifications and `false` for failure notifications
+                - `errors` : an optional array of errors (omitted or empty for success notifications)
+                - `warnings` : an optional array of warnings
+                - `event` (child of `callback`): a JSON object that event triggering the callback (typicall a status change)
+                  - `status` : the new status of the media processing job, with the following possible values:
+                    - `finished` : media processing completed successfully
+                    - `failed` : media processing failed
+              - `media` : the requested data for the media item
+                - `mediaId` : the unique VoiceBase id for the media item
+                - `status` : the status of processing for the media item
+                - `metadata` : the metadata for the media item, typically for correlation to external systems (present if requested when media is uploaded)
+                - `transcripts` : the transcipt(s) for the media (present if requested when media is uploaded)
+                - `topics` : the topics and keywords for the media (present if requested when media is uploaded)
+
+
+            ```json
+            {
+              "_links" : {
+                "self" : { "href" : "https://apis.voicebase.com/v2-beta/media/3c7499c2-aebd-4efc-aaf7-0ad4636cc160" }
+              },
+              "callback" : {
+                "success" : true,
+                "errors" : [ ],
+                "warnings" : [ ],
+                "event" : {
+                  "status" : "finished"
+                }
+              },
+              "media" : {
+                "mediaId" : "3c7499c2-aebd-4efc-aaf7-0ad4636cc160",
+                "status" : "finished",
+                "metadata" : {
+                  "latest" : {
+                    "title" : "An interesting conversation",
+                    "external" : {
+                      "id" : "fe26afe9-e5cf-4f48-976d-29dd758a0550"
+                    }
+                  }
+                },
+                "transcripts" : {
+                  "latest" : {
+                    "transcriptId" : "e0589bc2-5266-4c52-8347-42c2c186fe16",
+                    "type" : "machine",
+                    "engine" : "premium",
+                    "features" : [ "speakerTurns", "speakerId" ],
+                    "formats" : [ "json", "srt" ],
+                    "words" : [
+                      { "p" : 1, "c" : 0.927, "s" : 10, "e" : 1390, "w" : "him" }
+                    ]
+                  }
+                },
+                "topics" : {
+                  "latest" : {
+                    "revision" : "cc7bd8d1-bb76-47c9-bf52-54acd43aea57",
+                    "terms" : [
+                      {
+                        "name" : "mobile industry",
+                        "id" : "6f71daf4-4f97-45c6-a29f-5726cbdba270",
+                        "spotting" : false,
+                        "keywords" : [
+                          "mobile advertising",
+                          "mobile usage"
+                        ]
+                      },
+                      {
+                        "name" : "mobile-phone",
+                        "spotting" : true,
+                        "keywords" : [
+                          "iPhone"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+            ```
+    -
+        title: Working with Metadata and External Identifiers
+        content: |
+
+            This set of examples relies on the commonly-found *curl* tool and *jq* for JSON handling. You can find *jq* here: [jq](http://stedolan.github.io/jq/)
+
+            Working with Metadata and External Identifiers
+            ----------------------------------------------
+
+            To add metadata to your requests, include a JSON `metadata` attachment with your media `POST`. The `metadata` attachment should contain the key:
+              - `metadata` : root object for metadata
+                - `extended` (child of `metadata`): object for semi-structure custom metadata
+                - `external` (child of `metadata`): metadata for correlation to external systems
+                  - `id` (child of `external`): identifier of the media in a system external to VoiceBase
+
+            For example, to upload media from a local file called `recording.mp3`, with an external identifer `abc123` and the metadata below, make the following `POST` request using curl, or an equivalent request using a tool of your choice.
+
+            The example metadata captures:
+              - customer name
+              - the channel the customer came in on
+              - IVR options chosen during the call
+
+            ```sh
+            curl https://apis.voicebase.com/v2-beta/media \
+                --header "Authorization: Bearer $TOKEN" \
+                --form media=@recording.mp3 \
+                --form 'metadata={
+                    "metadata": {
+                      "external" : {
+                        "id" : "abc123"
+                      },
+                      "extended" : {
+                        "customer" : "John Doe",
+                        "channel" : "1 (800) EXAMPLE",
+                        "IVR" : [ "existing customer", "account services", "change my address" ]
+                      }
+                    }
+                  }' \
+                | tee media-post-response.json | jq '.'
+            export MEDIA_ID=$( jq --raw-output '.mediaId' < media-post-response.json )
+            echo "Uploaded file with mediaId = ${MEDIA_ID}"
+            ```
+            _Note: external identifiers and extended metadata are both optional. Both, one, or neither may be supplied, and the `metadata` attachment may be omitted._
+
+            Retrieving Media by External Identifier
+            ------------------------------------------
+
+            To retrieve media by its external identifier, add an `externalId` querystring parameter to GET requests against the `/media/` collection. For example, to retrieve media for the external identifier `abc123`, make the following `GET` request using curl, or an equivalent request using a tool of your choice.
+
+
+            ```sh
+            curl "https://apis.voicebase.com/v2-beta/media/?externalId=abc123" \
+                --header "Authorization: Bearer $TOKEN" \
+                | tee media-get-all.json | jq '.'
+            ```
+
+            _Note: Using unique external identifiers is recommended, but not required. If external identifiers are not using, the above request will return multiple results._
