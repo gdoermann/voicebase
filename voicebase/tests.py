@@ -9,8 +9,12 @@ class TestApi(unittest.TestCase):
             self.fail('API Key not set, all tests will fail!')
         if not settings.PASSWORD:
             self.fail('API Password not set, all tests will fail!')
+        self.assertIn('media', settings.URLS.keys())
 
     def test_api_auth(self):
         api = VoicebaseApi()
         token = api.get_auth_token()
         self.assertIsInstance(token, str)
+
+        token = api.token
+        self.assertEqual(token, api.token) # Test that the token doesn't change!

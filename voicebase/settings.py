@@ -1,4 +1,5 @@
 import os
+from attrdict import AttrDict
 try:
     import configparser
 except ImportError:
@@ -6,7 +7,7 @@ except ImportError:
 
 
 # The "default" config for everyone.  You can use this as a base.
-DEFAULT_CONF = os.path.join(os.path.dirname(__file__), 'default.conf')
+DEFAULT_CONF = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'default.conf')
 # The /etc/default (machine level) configuration
 ETC_CONF = '/etc/default/voicebase.conf'
 # Overrides for the user in ${HOME}/.voicebase.conf
@@ -16,7 +17,7 @@ HOME_CONF = '{}/.voicebase.conf'.format(os.environ.get('HOME', '~'))
 all_files = [ETC_CONF, HOME_CONF]
 CONFIG_FILES = [DEFAULT_CONF] # We always read in the default
 for f in all_files:
-    if not os.path.exists(f):
+    if os.path.exists(f):
         CONFIG_FILES.append(f)
 
 parser = configparser.ConfigParser()
@@ -25,4 +26,10 @@ parser.read(CONFIG_FILES)
 API_KEY = parser.get('authentication', 'API_KEY')
 PASSWORD = parser.get('authentication', 'PASSWORD')
 
-BASE_URL = parser.get('api', 'BASE_URL')
+BASE_URL = parser.get('default', 'BASE_URL')
+URLS = AttrDict()
+for key, base_url in parser.items('api'):
+    section = AttrDict({'base': base_url})
+    for url_key, value in parser.items('api.{}'.format(key)):
+        section[url_key] = '{}/{}'.format(base_url, value)
+    URLS[key] = section
