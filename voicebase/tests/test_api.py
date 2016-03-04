@@ -1,7 +1,8 @@
-import unittest
 from voicebase.api import VoicebaseApi
+from voicebase.tests.lib import BaseTestCase
 
-class TestApi(unittest.TestCase):
+
+class TestApi(BaseTestCase):
     def test_settings(self):
         from voicebase import settings
         self.assertIn(settings.DEFAULT_CONF, settings.CONFIG_FILES)
@@ -12,9 +13,9 @@ class TestApi(unittest.TestCase):
         self.assertIn('media', settings.URLS.keys())
 
     def test_api_auth(self):
-        api = VoicebaseApi()
-        token = api.get_auth_token()
+        token = self.api.get_auth_token()
         self.assertIsInstance(token, str)
 
-        token = api.token
-        self.assertEqual(token, api.token) # Test that the token doesn't change!
+        token = self.api.token
+        self.assertEqual(token, self.api.token) # Test that the token doesn't change!
+

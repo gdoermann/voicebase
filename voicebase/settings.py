@@ -33,3 +33,7 @@ for key, base_url in parser.items('api'):
     for url_key, value in parser.items('api.{}'.format(key)):
         section[url_key] = '{}/{}'.format(base_url, value)
     URLS[key] = section
+
+
+TESTING = AttrDict()
+TESTING.RAISE_NOT_IMPLEMENTED = parser.getboolean('testing', 'raise_not_implemented')

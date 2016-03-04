@@ -83,7 +83,6 @@ class VoicebaseMedia(object):
         """
 
 
-
 class MediaEndpoint(BaseApiEndpoint):
     URLS = settings.URLS.media
 
