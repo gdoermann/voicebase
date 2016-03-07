@@ -1,4 +1,5 @@
 import json
+from urlparse import urljoin
 
 from voicebase import settings
 import requests
@@ -15,8 +16,11 @@ class VoicebaseApi(object):
         self.definitions = definitions.DefinitionsEndpoint(self)
         self.access = access.AccessEndpoint(self)
 
+    def base_url(self):
+        return settings.BASE_URL
+
     def get_auth_token(self):
-        url = settings.BASE_URL
+        url = urljoin(self.base_url(), settings.API_VERSION)
         params = dict(apikey=self.api_key, password=self.password)
         raw_response = requests.get(url, params=params)
         raw_response.raise_for_status()

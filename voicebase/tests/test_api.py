@@ -1,4 +1,5 @@
 from voicebase.api import VoicebaseApi
+from voicebase.api.base import BaseApiEndpoint
 from voicebase.tests.lib import BaseTestCase
 
 
@@ -19,3 +20,15 @@ class TestApi(BaseTestCase):
         token = self.api.token
         self.assertEqual(token, self.api.token) # Test that the token doesn't change!
 
+
+class EndpointTest(BaseApiEndpoint):
+    URLS = {'testing': '/hello/there/api.json',
+            'test2': 'more/testing'}
+
+
+class TestApiEndpoint(BaseTestCase):
+    def test_generate_url(self):
+        self.assertEqual(EndpointTest(self.api).full_url('testing'), 'https://apis.voicebase.com/hello/there/api.json')
+        self.assertEqual(EndpointTest(self.api).full_url('testing', base='http://boo.com'), 'http://boo.com/hello/there/api.json')
+        self.assertEqual(EndpointTest(self.api).full_url('testing', base='http://boo.com/'), 'http://boo.com/hello/there/api.json')
+        self.assertEqual(EndpointTest(self.api).full_url('test2', base='http://boo.com'), 'http://boo.com/more/testing')

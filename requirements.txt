@@ -2,3 +2,4 @@ Sphinx
 mock
 requests
 attrdict
+python-magic

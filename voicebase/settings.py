@@ -27,8 +27,10 @@ API_KEY = parser.get('authentication', 'API_KEY')
 PASSWORD = parser.get('authentication', 'PASSWORD')
 
 BASE_URL = parser.get('default', 'BASE_URL')
+API_VERSION = parser.get('default', 'API_VERSION')
 URLS = AttrDict()
-for key, base_url in parser.items('api'):
+for key, base_key in parser.items('api'):
+    base_url = '/'.join([API_VERSION, base_key])
     section = AttrDict({'base': base_url})
     for url_key, value in parser.items('api.{}'.format(key)):
         section[url_key] = '{}/{}'.format(base_url, value)
