@@ -1,4 +1,5 @@
 import json
+import logging
 
 import magic
 import requests
@@ -7,6 +8,8 @@ from attrdict import AttrDict
 from voicebase import settings
 from voicebase.api.base import BaseApiEndpoint
 
+
+log = logging.getLogger(__name__)
 
 def clean_dict(d, test=lambda v: v):
     """
@@ -188,9 +191,10 @@ class VoicebaseMedia(object):
             from voicebase.api import VoicebaseApi
             self.api = VoicebaseApi()
         self.url = self._obj.get('_links', {}).get('self', {}).get('href', '')
-        self.id = self._obj.get('mediaId', '')
-        self.status = self._obj.get('status', '')
-        if 'progress' in self._obj:
+        media_info = self._obj.get('media', self._obj)
+        self.id = media_info.get('mediaId', '')
+        self.status = media_info.get('status', '')
+        if 'progress' in media_info:
             self.progress = VoicebaseMediaProgress(self, self._obj.get('progress'))
 
     @property
@@ -260,9 +264,8 @@ class MediaEndpoint(BaseApiEndpoint):
         :param external_id: A unique identifier in an external system, set in metadata on POST.
         :return: list(VoicebaseMedia)
         """
-        response = self.session.get(self.full_url('base'))
-        response.raise_for_status()
-        return [VoicebaseMedia(o, self.api) for o in response.json()['media']]
+        response = self._get('base')
+        return [VoicebaseMedia(o, self.api) for o in response['media']]
 
     def upload(self, filename, configuration=None, metadata=None, transcript=None):
         """
@@ -292,7 +295,9 @@ class MediaEndpoint(BaseApiEndpoint):
             prepared_rq = rq.prepare()
             response = self.session.send(prepared_rq)
             response.raise_for_status()
-        return VoicebaseMedia(response.json(), self.api)
+        jsn = response.json()
+        log.debug('Upload response: {}'.format(jsn))
+        return VoicebaseMedia(jsn, api=self.api)
 
     def get(self, media_id):
         """
@@ -301,7 +306,8 @@ class MediaEndpoint(BaseApiEndpoint):
         :param media_id: Media ID
         :return: VoicebaseMedia
         """
-
+        response = self._get('item', format_dict=dict(media_id=media_id))
+        return VoicebaseMedia(response, api=self.api)
 
     def delete(self, media_id):
         """
